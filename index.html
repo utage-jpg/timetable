@@ -151,6 +151,67 @@ body {
 }
 .filter-all-btn:hover { background: var(--bg); color: var(--text); }
 
+/* ── 原本PDFボタン ── */
+.pdf-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--muted); text-decoration: none;
+  padding: 4px 11px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg);
+  cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.pdf-btn:hover { color: #dc2626; border-color: #fca5a5; background: #fff5f5; }
+
+/* ── PDFモーダル ── */
+.pdf-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.45); align-items: center; justify-content: center;
+}
+.pdf-modal-overlay.open { display: flex; }
+.pdf-modal {
+  background: var(--surface); border-radius: 14px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.25);
+  width: min(620px, 94vw); max-height: 80vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.pdf-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.pdf-modal-title { font-size: 15px; font-weight: 800; }
+.pdf-modal-close {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg);
+  color: var(--muted); font-size: 16px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .12s;
+}
+.pdf-modal-close:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+.pdf-modal-body { overflow-y: auto; padding: 16px 20px 20px; }
+.pdf-cat-section { margin-bottom: 20px; }
+.pdf-cat-section:last-child { margin-bottom: 0; }
+.pdf-cat-label {
+  font-size: 11px; font-weight: 800; letter-spacing: .06em;
+  padding: 3px 10px; border-radius: 20px; color: #fff;
+  display: inline-block; margin-bottom: 10px;
+}
+.pdf-course-list { display: flex; flex-direction: column; gap: 6px; }
+.pdf-course-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg);
+  gap: 10px;
+}
+.pdf-course-name { font-size: 12.5px; font-weight: 600; color: var(--text); flex: 1; }
+.pdf-open-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 12px; font-size: 11px; font-weight: 700;
+  border-radius: 6px; border: none; cursor: pointer;
+  background: #fee2e2; color: #dc2626; transition: all .12s;
+  text-decoration: none; white-space: nowrap; flex-shrink: 0;
+}
+.pdf-open-btn:hover { background: #dc2626; color: #fff; }
+
 /* ── サブカテゴリフィルター ── */
 .toolbar-subcat-row {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -519,8 +580,28 @@ body {
     </a>
     <span class="header-title">年間時間表</span>
   </div>
-  <div style="font-size:11px;color:var(--muted)" id="eventCount">— 件</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button class="pdf-btn" onclick="openPdfModal()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      原本PDF
+    </button>
+    <div style="font-size:11px;color:var(--muted)" id="eventCount">— 件</div>
+  </div>
 </header>
+
+<!-- ── PDFモーダル ── -->
+<div class="pdf-modal-overlay" id="pdfModalOverlay" onclick="closePdfModalOnBg(event)">
+  <div class="pdf-modal">
+    <div class="pdf-modal-head">
+      <span class="pdf-modal-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:5px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        時間表 原本PDF
+      </span>
+      <button class="pdf-modal-close" onclick="closePdfModal()">✕</button>
+    </div>
+    <div class="pdf-modal-body" id="pdfModalBody"></div>
+  </div>
+</div>
 
 <div class="toolbar" id="toolbar">
   <div class="toolbar-month-row">
@@ -1111,6 +1192,91 @@ function scrollToToday() {
   if (anchor) {
     window.scrollTo({ top: anchor.getBoundingClientRect().top + window.scrollY - toolbarH - 8, behavior: 'instant' });
   }
+}
+
+// ================================================================
+// PDFモーダル
+// ================================================================
+const PDF_FILES = {
+  '１級設計製図パーフェクト本科-土曜':           'pdf/１級設計製図パーフェクト本科-土曜.pdf',
+  '１級設計製図パーフェクト本科-日曜':           'pdf/１級設計製図パーフェクト本科-日曜.pdf',
+  '１級建築士学科本科-土曜':                     'pdf/１級建築士学科本科-土曜.pdf',
+  '１級建築士学科本科-平日':                     'pdf/１級建築士学科本科-平日.pdf',
+  '１級建築士学科本科-日曜':                     'pdf/１級建築士学科本科-日曜.pdf',
+  '２級設計製図パーフェクト本科-日曜(STEP1日曜)':'pdf/２級設計製図パーフェクト本科-日曜(STEP1日曜).pdf',
+  '２級建築士学科本科-平日':                     'pdf/２級建築士学科本科-平日.pdf',
+  '２級建築士学科本科-日曜':                     'pdf/２級建築士学科本科-日曜.pdf',
+  '２級建築士学科問解-平日':                     'pdf/２級建築士学科問解-平日.pdf',
+  '２級建築士学科問解-日曜':                     'pdf/２級建築士学科問解-日曜.pdf',
+  '１級建築施工一次-夜間':                       'pdf/１級建築施工一次-夜間.pdf',
+  '１級建築施工一次-日曜':                       'pdf/１級建築施工一次-日曜.pdf',
+  '1級建築施工二次速修-日曜':                    'pdf/1級建築施工二次速修-日曜.pdf',
+  '２級建築施工一次6月-夜間':                    'pdf/２級建築施工一次6月-夜間.pdf',
+  '１級土木施工一次-夜間':                       'pdf/１級土木施工一次-夜間.pdf',
+  '１級土木施工一次-日曜':                       'pdf/１級土木施工一次-日曜.pdf',
+  '宅建本科-夜間':                               'pdf/宅建本科-夜間.pdf',
+  '宅建本科-平日':                               'pdf/宅建本科-平日.pdf',
+  '宅建本科-日曜':                               'pdf/宅建本科-日曜.pdf',
+};
+
+function openPdfModal() {
+  const body = document.getElementById('pdfModalBody');
+  body.innerHTML = '';
+
+  // カテゴリ順にコースを並べる
+  const catCourses = {};
+  CATEGORIES.forEach(c => catCourses[c.key] = []);
+  SCHEDULE_DATA.courses.forEach(course => {
+    const key = getCatKey(course);
+    if (catCourses[key]) catCourses[key].push(course);
+  });
+
+  CATEGORIES.forEach(cat => {
+    const courses = catCourses[cat.key];
+    if (!courses.length) return;
+
+    const sec = document.createElement('div');
+    sec.className = 'pdf-cat-section';
+
+    const lbl = document.createElement('span');
+    lbl.className = 'pdf-cat-label';
+    lbl.style.background = cat.color;
+    lbl.textContent = cat.label;
+    sec.appendChild(lbl);
+
+    const list = document.createElement('div');
+    list.className = 'pdf-course-list';
+
+    courses.forEach(course => {
+      const pdfPath = PDF_FILES[course];
+      const row = document.createElement('div');
+      row.className = 'pdf-course-row';
+      row.innerHTML = `
+        <span class="pdf-course-name">${escHtml(course)}</span>
+        ${pdfPath
+          ? `<a class="pdf-open-btn" href="${pdfPath}" target="_blank" rel="noopener">
+               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+               PDFを開く
+             </a>`
+          : `<span style="font-size:11px;color:var(--muted-lt)">準備中</span>`
+        }
+      `;
+      list.appendChild(row);
+    });
+
+    sec.appendChild(list);
+    body.appendChild(sec);
+  });
+
+  document.getElementById('pdfModalOverlay').classList.add('open');
+}
+
+function closePdfModal() {
+  document.getElementById('pdfModalOverlay').classList.remove('open');
+}
+
+function closePdfModalOnBg(e) {
+  if (e.target === document.getElementById('pdfModalOverlay')) closePdfModal();
 }
 
 // ================================================================
