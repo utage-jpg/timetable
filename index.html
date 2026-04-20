@@ -151,6 +151,33 @@ body {
 }
 .filter-all-btn:hover { background: var(--bg); color: var(--text); }
 
+/* ── サブカテゴリフィルター ── */
+.toolbar-subcat-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--border-lt);
+}
+.subcat-group {
+  display: flex; align-items: center; gap: 4px; transition: opacity .15s;
+}
+.subcat-group.disabled { opacity: .35; pointer-events: none; }
+.subcat-group-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .03em;
+  white-space: nowrap; margin-right: 1px;
+}
+.subcat-btn {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 9px; font-size: 11px; font-weight: 700;
+  border-radius: 20px; border: 1.5px solid transparent;
+  cursor: pointer; transition: all .15s; font-family: inherit;
+  white-space: nowrap; line-height: 1.5;
+}
+.subcat-btn.off { opacity: .5; }
+.subcat-count {
+  font-size: 9.5px; font-weight: 800; opacity: .8;
+  background: rgba(255,255,255,.3); padding: 0 3px; border-radius: 6px; line-height: 1.6;
+}
+.subcat-btn.off .subcat-count { background: rgba(0,0,0,.07); }
+
 /* ── 全体レイアウト (カレンダーサイドバー + スケジュール) ── */
 .schedule-layout {
   display: flex;
@@ -393,6 +420,13 @@ body {
    モバイル対応 (〜767px)
    ================================================================ */
 @media (max-width: 767px) {
+  .toolbar-subcat-row {
+    flex-wrap: nowrap; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 8px;
+  }
+  .toolbar-subcat-row::-webkit-scrollbar { display: none; }
+  .subcat-btn { font-size: 10px; padding: 2px 7px; }
+
   /* カレンダー非表示 */
   .cal-sidebar { display: none !important; }
 
@@ -498,6 +532,7 @@ body {
     <div class="cat-filters" id="catFilters"></div>
     <button class="filter-all-btn" id="filterAllBtn" onclick="toggleAllCategories()">全解除</button>
   </div>
+  <div class="toolbar-subcat-row" id="subcatFilterRow"></div>
 </div>
 
 <div class="schedule-layout">
@@ -538,6 +573,22 @@ const CATEGORIES = [
   { key: '宅建',    label: '宅建',      color: '#d97706', lt: '#fffbeb' },
 ];
 
+const SUBCATEGORIES = {
+  '1建築士': [
+    { key: '学科',    label: '学科' },
+    { key: '設計製図', label: '設計製図' },
+  ],
+  '2建築士': [
+    { key: '学科',    label: '学科' },
+    { key: '問題解説', label: '問題解説' },
+    { key: '設計製図', label: '設計製図' },
+  ],
+  '建築施工': [
+    { key: '1級', label: '1級' },
+    { key: '2級', label: '2級' },
+  ],
+};
+
 function getCatKey(course) {
   if (/１級建築士|1級建築士/.test(course))  return '1建築士';
   if (/２級建築士|2級建築士/.test(course))  return '2建築士';
@@ -560,6 +611,18 @@ function getSubLabel(course) {
   if (/土木.*一次/.test(course))                             return '土木一次';
   if (/本科/.test(course))                                    return '学科本科';
   return '本科';
+}
+
+// コース → サブカテゴリキー
+function getCatSubKey(catKey, course) {
+  if (catKey === '1建築士') return /設計製図/.test(course) ? '設計製図' : '学科';
+  if (catKey === '2建築士') {
+    if (/設計製図/.test(course)) return '設計製図';
+    if (/問解/.test(course))    return '問題解説';
+    return '学科';
+  }
+  if (catKey === '建築施工') return /２級建築施工|2級建築施工/.test(course) ? '2級' : '1級';
+  return null;
 }
 
 // コース名 → 曜日略称
@@ -603,6 +666,12 @@ const MONTHS = (() => {
 
 const activeCategories = new Set(CATEGORIES.map(c => c.key));
 
+// サブカテゴリ状態: catKey → Set of active sub-keys
+const activeSubCats = {};
+Object.keys(SUBCATEGORIES).forEach(catKey => {
+  activeSubCats[catKey] = new Set(SUBCATEGORIES[catKey].map(s => s.key));
+});
+
 // ================================================================
 // ② ツールバー高さ → CSS変数にセット（月バナーのstickyオフセット）
 // ================================================================
@@ -642,6 +711,66 @@ function buildCatFilters() {
   });
 }
 
+function buildSubCatFilters() {
+  const row = document.getElementById('subcatFilterRow');
+  row.innerHTML = '';
+
+  Object.entries(SUBCATEGORIES).forEach(([catKey, subs]) => {
+    const catInfo = getCatInfo(catKey);
+
+    // コース数を集計
+    const subCounts = {};
+    subs.forEach(s => subCounts[s.key] = new Set());
+    SCHEDULE_DATA.courses.forEach(course => {
+      if (getCatKey(course) !== catKey) return;
+      const sk = getCatSubKey(catKey, course);
+      if (sk && subCounts[sk]) subCounts[sk].add(course);
+    });
+
+    const group = document.createElement('div');
+    group.className = 'subcat-group';
+    group.id = `subcatGroup-${catKey}`;
+
+    const lbl = document.createElement('span');
+    lbl.className = 'subcat-group-label';
+    lbl.style.color = catInfo.color;
+    lbl.textContent = catInfo.label + ':';
+    group.appendChild(lbl);
+
+    subs.forEach(sub => {
+      const btn = document.createElement('button');
+      btn.className = 'subcat-btn on';
+      btn.dataset.cat = catKey;
+      btn.dataset.sub = sub.key;
+      btn.style.borderColor = catInfo.color;
+      btn.style.background  = catInfo.color;
+      btn.style.color       = '#fff';
+      btn.innerHTML = `${sub.label}<span class="subcat-count">${subCounts[sub.key].size}</span>`;
+      btn.addEventListener('click', () => toggleSubCategory(catKey, sub.key));
+      group.appendChild(btn);
+    });
+
+    row.appendChild(group);
+  });
+}
+
+function toggleSubCategory(catKey, subKey) {
+  const catInfo = getCatInfo(catKey);
+  const btn = document.querySelector(`.subcat-btn[data-cat="${catKey}"][data-sub="${subKey}"]`);
+  if (activeSubCats[catKey].has(subKey)) {
+    activeSubCats[catKey].delete(subKey);
+    btn.classList.replace('on', 'off');
+    btn.style.background = '';
+    btn.style.color      = catInfo.color;
+  } else {
+    activeSubCats[catKey].add(subKey);
+    btn.classList.replace('off', 'on');
+    btn.style.background = catInfo.color;
+    btn.style.color      = '#fff';
+  }
+  applyFilter();
+}
+
 function toggleCategory(catKey) {
   const btn = document.querySelector(`.cat-btn[data-cat="${catKey}"]`);
   if (activeCategories.has(catKey)) {
@@ -651,6 +780,9 @@ function toggleCategory(catKey) {
     activeCategories.add(catKey);
     btn.classList.replace('off', 'on');
   }
+  // サブカテゴリグループの有効/無効を連動
+  const group = document.getElementById(`subcatGroup-${catKey}`);
+  if (group) group.classList.toggle('disabled', !activeCategories.has(catKey));
   applyFilter();
   updateAllBtn();
 }
@@ -668,6 +800,11 @@ function toggleAllCategories() {
     _allOn = true;
     document.getElementById('filterAllBtn').textContent = '全解除';
   }
+  // サブカテゴリグループを連動
+  Object.keys(SUBCATEGORIES).forEach(catKey => {
+    const group = document.getElementById(`subcatGroup-${catKey}`);
+    if (group) group.classList.toggle('disabled', !_allOn);
+  });
   applyFilter();
 }
 function updateAllBtn() {
@@ -684,7 +821,11 @@ function applyFilter() {
     let sectionHasVisible = false;
 
     section.querySelectorAll('.lesson-row').forEach(row => {
-      const visible = activeCategories.has(row.dataset.cat);
+      const catKey = row.dataset.cat;
+      const subKey = row.dataset.subcat;
+      const catActive = activeCategories.has(catKey);
+      const subActive = !subKey || !activeSubCats[catKey] || activeSubCats[catKey].has(subKey);
+      const visible = catActive && subActive;
       row.classList.toggle('hidden-course', !visible);
       if (visible) { sectionHasVisible = true; anyVisible = true; }
     });
@@ -899,6 +1040,7 @@ function buildContent() {
         ].filter(Boolean).join(' ');
         row.dataset.cat    = catKey;
         row.dataset.course = lesson.course;
+        row.dataset.subcat = getCatSubKey(catKey, lesson.course) || '';
 
         // Tier2: カテゴリ色で背景を設定（紫を使わない）
         if (tier === 2) {
@@ -976,6 +1118,7 @@ function scrollToToday() {
 // ================================================================
 function init() {
   buildCatFilters();
+  buildSubCatFilters();
   buildMonthNav();
   buildContent();
   updateEventCount();
