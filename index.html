@@ -367,13 +367,12 @@ body {
 .lesson-row.tier1 .lesson-cat-bar { background: #b45309 !important; }
 /* Tier 2 — 特別研修会・オリエンテーション (カテゴリ色で強調、JS でインライン設定) */
 .lesson-row.tier2 .lesson-subject { font-weight: 700; }
-/* Tier 3 — 模擬試験・中間試験 (青) */
+/* Tier 3 — 模擬試験・中間試験 (背景のみ) */
 .lesson-row.tier3 {
   background: linear-gradient(90deg, #eff6ff 0%, #f8fbff 60%, var(--surface) 100%);
   border-top: 1px solid #bfdbfe;
 }
-.lesson-row.tier3 .lesson-subject { color: #1e3a8a; font-weight: 700; }
-.lesson-row.tier3 .lesson-cat-bar { background: #2563eb !important; }
+.lesson-row.tier3 .lesson-subject { font-weight: 700; }
 
 .tier-badge {
   display: inline-flex; align-items: center; gap: 3px;
@@ -445,7 +444,7 @@ body {
   .day-full-date { font-size: 10px; }
 
   /* 授業行: subject を上段・time+バッジを下段に */
-  .lesson-cat-bar { width: 48px; font-size: 9px; padding: 0 3px; }
+  .lesson-cat-bar { width: 56px; font-size: 9px; padding: 0 3px; }
   .lesson-inner {
     padding: 7px 10px;
     flex-wrap: wrap;
@@ -916,8 +915,13 @@ function buildContent() {
           }
         }
 
+        // 設計製図は学科より濃いシェードで区別（1・2級建築士のみ）
+        let catBarColor = catInfo.color;
+        if (catKey === '1建築士' && subLabel === '設計製図') catBarColor = '#9d174d';
+        if (catKey === '2建築士' && subLabel === '設計製図') catBarColor = '#155e75';
+
         row.innerHTML = `
-          <div class="lesson-cat-bar" style="background:${catInfo.color}">${escHtml(catInfo.label)}</div>
+          <div class="lesson-cat-bar" style="background:${catBarColor}">${escHtml(catInfo.label)}</div>
           <div class="lesson-inner">
             <span class="lesson-time">${lesson.time || '—'}</span>
             <span class="lesson-subject">${escHtml(lesson.subject)}</span>
