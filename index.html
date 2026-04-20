@@ -590,8 +590,8 @@ const SUBCATEGORIES = {
 };
 
 function getCatKey(course) {
-  if (/１級建築士|1級建築士/.test(course))  return '1建築士';
-  if (/２級建築士|2級建築士/.test(course))  return '2建築士';
+  if (/１級建築士|1級建築士|１級設計製図|1級設計製図/.test(course))  return '1建築士';
+  if (/２級建築士|2級建築士|２級設計製図|2級設計製図/.test(course))  return '2建築士';
   if (/建築施工/.test(course))               return '建築施工';
   if (/土木施工/.test(course))               return '土木';
   if (/宅建/.test(course))                   return '宅建';
