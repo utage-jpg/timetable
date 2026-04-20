@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>年間時間表 — 冨澤用ポータル</title>
+<script src="schedule_data.js"></script>
+<style>
+:root {
+  --indigo:     #4f46e5;
+  --indigo-lt:  #eef2ff;
+  --indigo-bd:  #c7d2fe;
+  --bg:         #f1f4f9;
+  --surface:    #ffffff;
+  --border:     #e5e7eb;
+  --border-lt:  #f3f4f6;
+  --text:       #111827;
+  --text-sub:   #374151;
+  --muted:      #6b7280;
+  --muted-lt:   #9ca3af;
+  --shadow-xs:  0 1px 2px rgba(0,0,0,.05);
+  --shadow-sm:  0 1px 4px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:  0 4px 16px rgba(0,0,0,.10);
+
+  /* カテゴリ配色 */
+  --cat-1k:   #db2777;  /* 1級建築士 — ピンク */
+  --cat-2k:   #0891b2;  /* 2級建築士 — 水色   */
+  --cat-cs:   #2563eb;  /* 建築施工  — 青     */
+  --cat-dw:   #16a34a;  /* 土木      — 緑     */
+  --cat-tk:   #d97706;  /* 宅建      — 黄     */
+  --cat-1k-lt: #fce7f3;
+  --cat-2k-lt: #ecfeff;
+  --cat-cs-lt: #eff6ff;
+  --cat-dw-lt: #f0fdf4;
+  --cat-tk-lt: #fffbeb;
+
+  /* ツールバー高さ(JS で設定) */
+  --toolbar-h: 88px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Meiryo UI', Meiryo, sans-serif;
+  background: var(--bg); color: var(--text);
+  font-size: 13px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── ヘッダー ── */
+.header {
+  background: var(--surface); height: 52px; padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative; border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.header::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #4f46e5 0%, #0891b2 40%, #f43f5e 100%);
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.back-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--muted); text-decoration: none;
+  padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg); transition: all .15s;
+}
+.back-btn:hover { color: var(--indigo); border-color: var(--indigo-bd); background: var(--indigo-lt); }
+.header-title { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+
+/* ── スティッキー ツールバー ── */
+.toolbar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 8px 24px 10px;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: var(--shadow-xs);
+}
+.toolbar-month-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tb-label {
+  font-size: 10px; font-weight: 700; color: var(--muted-lt);
+  letter-spacing: .08em; text-transform: uppercase;
+  white-space: nowrap; min-width: 54px;
+}
+.month-nav { display: flex; gap: 3px; flex-wrap: wrap; flex: 1; }
+.month-btn {
+  padding: 3px 10px; font-size: 11.5px; font-weight: 600;
+  border-radius: 20px; border: 1.5px solid var(--border);
+  background: transparent; color: var(--text-sub);
+  cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit;
+}
+.month-btn:hover  { background: var(--indigo-lt); border-color: var(--indigo-bd); color: var(--indigo); }
+.month-btn.active { background: var(--indigo); border-color: var(--indigo); color: #fff; box-shadow: 0 1px 6px rgba(79,70,229,.4); }
+
+/* ── カテゴリフィルター ── */
+.toolbar-filter-row {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--border-lt);
+}
+.cat-filters { display: flex; gap: 5px; flex-wrap: wrap; }
+.cat-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 11px; font-size: 12px; font-weight: 700;
+  border-radius: 20px; border: 2px solid transparent;
+  cursor: pointer; transition: all .18s; font-family: inherit; white-space: nowrap;
+  position: relative;
+}
+.cat-btn .cat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: currentColor; }
+.cat-btn .cat-count {
+  font-size: 10px; font-weight: 800; opacity: .75;
+  background: rgba(255,255,255,.35); padding: 0px 4px; border-radius: 8px;
+  line-height: 1.6;
+}
+.cat-btn.off .cat-count { background: rgba(0,0,0,.07); }
+.cat-btn.on  { color: #fff; }
+.cat-btn.off { opacity: .55; }
+
+/* カテゴリ別ボーダー・色 */
+.cat-btn[data-cat="1建築士"]      { border-color: var(--cat-1k); }
+.cat-btn[data-cat="1建築士"].on   { background: var(--cat-1k); }
+.cat-btn[data-cat="1建築士"].off  { color: var(--cat-1k); }
+.cat-btn[data-cat="2建築士"]      { border-color: var(--cat-2k); }
+.cat-btn[data-cat="2建築士"].on   { background: var(--cat-2k); }
+.cat-btn[data-cat="2建築士"].off  { color: var(--cat-2k); }
+.cat-btn[data-cat="建築施工"]     { border-color: var(--cat-cs); }
+.cat-btn[data-cat="建築施工"].on  { background: var(--cat-cs); }
+.cat-btn[data-cat="建築施工"].off { color: var(--cat-cs); }
+.cat-btn[data-cat="土木"]         { border-color: var(--cat-dw); }
+.cat-btn[data-cat="土木"].on      { background: var(--cat-dw); }
+.cat-btn[data-cat="土木"].off     { color: var(--cat-dw); }
+.cat-btn[data-cat="宅建"]         { border-color: var(--cat-tk); }
+.cat-btn[data-cat="宅建"].on      { background: var(--cat-tk); }
+.cat-btn[data-cat="宅建"].off     { color: var(--cat-tk); }
+.cat-btn:hover { opacity: 1 !important; }
+
+/* ツールチップ */
+.cat-btn::after {
+  content: attr(data-tip);
+  position: absolute; top: calc(100% + 6px); left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937; color: #fff;
+  font-size: 10px; font-weight: 500; line-height: 1.6;
+  padding: 5px 9px; border-radius: 6px;
+  white-space: pre; pointer-events: none;
+  opacity: 0; transition: opacity .15s;
+  z-index: 200; box-shadow: var(--shadow-md);
+}
+.cat-btn:hover::after { opacity: 1; }
+
+.filter-all-btn {
+  padding: 4px 10px; font-size: 11px; border-radius: 20px;
+  border: 1.5px solid var(--border); background: transparent; color: var(--muted);
+  cursor: pointer; font-family: inherit; transition: all .15s; margin-left: auto;
+}
+.filter-all-btn:hover { background: var(--bg); color: var(--text); }
+
+/* ── 全体レイアウト (カレンダーサイドバー + スケジュール) ── */
+.schedule-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 12px;
+}
+
+/* ── カレンダーサイドバー ── */
+.cal-sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  position: sticky;
+  top: var(--toolbar-h);
+  padding: 20px 12px 20px 0;
+  align-self: flex-start;
+}
+.cal-widget {
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.cal-widget-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-lt);
+  background: var(--surface);
+}
+.cal-widget-label {
+  font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: -.01em;
+}
+.cal-nav-btn {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg);
+  color: var(--muted); font-size: 12px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .12s;
+}
+.cal-nav-btn:hover { background: var(--indigo-lt); color: var(--indigo); border-color: var(--indigo-bd); }
+.cal-dow-row {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  padding: 8px 10px 3px;
+  gap: 3px;
+}
+.cal-dow {
+  text-align: center; font-size: 11px; font-weight: 700; color: var(--muted-lt);
+  padding: 2px 0;
+}
+.cal-dow:first-child { color: #f87171; }
+.cal-dow:last-child  { color: #60a5fa; }
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  padding: 2px 10px 14px; gap: 3px;
+}
+.s-cal-cell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  border-radius: 7px;
+  font-size: 12.5px; font-weight: 500; color: var(--text-sub);
+  cursor: default;
+  transition: background .1s;
+  padding-bottom: 5px;
+}
+.s-cal-cell.other   { color: #d1d5db; }
+.s-cal-cell.sat     { color: #3b82f6; }
+.s-cal-cell.sun     { color: #f43f5e; }
+.s-cal-cell.today   { background: var(--indigo); color: #fff !important; font-weight: 800; border-radius: 7px; }
+.s-cal-cell.has-event { cursor: pointer; }
+.s-cal-cell.has-event:not(.other):hover { background: var(--border-lt); }
+.s-cal-cell.today:hover { background: #4338ca; }
+.s-cal-dot-row {
+  position: absolute; bottom: 3px;
+  display: flex; gap: 2px; align-items: center;
+}
+.s-cal-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+}
+
+/* ── カレンダーツールチップ ── */
+#schedCalTooltip {
+  position: fixed; z-index: 9999; pointer-events: none;
+  background: #1e2433; color: #e2e8f0;
+  border-radius: 10px; padding: 10px 14px;
+  min-width: 200px; max-width: 280px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.35);
+  font-size: 11.5px; line-height: 1.5;
+  display: none;
+}
+#schedCalTooltip .stt-date  { font-size: 10px; color: #94a3b8; margin-bottom: 6px; font-weight: 600; }
+#schedCalTooltip .stt-item  { display: flex; align-items: flex-start; gap: 7px; margin-top: 5px; }
+#schedCalTooltip .stt-bar   { width: 3px; border-radius: 2px; flex-shrink: 0; margin-top: 3px; align-self: stretch; min-height: 14px; }
+#schedCalTooltip .stt-body  { flex: 1; }
+#schedCalTooltip .stt-time  { font-size: 10px; color: #94a3b8; }
+#schedCalTooltip .stt-subj  { font-size: 11.5px; font-weight: 600; color: #f1f5f9; }
+#schedCalTooltip .stt-cat   { font-size: 10px; color: #64748b; }
+#schedCalTooltip .stt-more  { font-size: 10px; color: #64748b; margin-top: 5px; }
+
+/* ── メイン ── */
+.main { flex: 1; min-width: 0; padding: 28px 12px 80px 20px; }
+.month-section { margin-bottom: 48px; }
+.month-section.hidden { display: none; }
+
+/* ── 月バナー (sticky: 月境目が分かるように上に貼り付く) ── */
+.month-banner {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 10px 18px;
+  background: var(--surface);
+  border-radius: 10px;
+  border-left: 6px solid var(--indigo);
+  box-shadow: var(--shadow-xs);
+  margin-bottom: 16px;
+  /* ② スクロール中も月名を表示 */
+  position: sticky;
+  top: var(--toolbar-h);
+  z-index: 50;
+  transition: box-shadow .2s;
+}
+/* スクロール中は影を濃くして「浮いている」感を出す */
+.month-banner.is-stuck {
+  box-shadow: var(--shadow-md);
+  border-radius: 0 0 10px 10px;
+}
+.month-banner-num  { font-size: 28px; font-weight: 900; color: var(--indigo); line-height: 1; letter-spacing: -.03em; }
+.month-banner-unit { font-size: 13px; font-weight: 700; color: var(--indigo); }
+.month-banner-year { font-size: 12px; color: var(--muted); font-weight: 500; }
+.month-banner-count { font-size: 11px; color: var(--muted-lt); margin-left: auto; }
+
+/* ── 日グループ ── */
+.day-group { margin-bottom: 8px; border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-xs); }
+.day-header {
+  display: flex; align-items: center;
+  background: #f8fafc; border: 1px solid var(--border); border-bottom: none;
+  border-radius: 8px 8px 0 0; overflow: hidden;
+}
+.day-stripe {
+  width: 44px; flex-shrink: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 8px 0; gap: 2px;
+}
+.day-stripe.sat { background: #dbeafe; }
+.day-stripe.sun { background: #fee2e2; }
+.day-stripe.wkd { background: #f3f4f6; }
+.day-stripe-dow { font-size: 12px; font-weight: 800; line-height: 1; }
+.day-stripe.sat .day-stripe-dow { color: #1d4ed8; }
+.day-stripe.sun .day-stripe-dow { color: #dc2626; }
+.day-stripe.wkd .day-stripe-dow { color: var(--muted); }
+.day-info { flex: 1; padding: 7px 12px; display: flex; align-items: baseline; gap: 6px; }
+.day-num { font-size: 22px; font-weight: 900; line-height: 1; color: var(--text); letter-spacing: -.02em; }
+.day-full-date { font-size: 11px; color: var(--muted); }
+.day-today-chip { font-size: 10px; font-weight: 700; background: #f97316; color: #fff; padding: 1px 7px; border-radius: 10px; }
+.day-header.today-header { background: #fff7ed; border-color: #fed7aa; }
+.day-header.today-header .day-num { color: #f97316; }
+.day-header.today-header .day-stripe.wkd { background: #ffedd5; }
+.day-header.today-header .day-stripe.wkd .day-stripe-dow { color: #f97316; }
+
+/* ── 授業リスト ── */
+.lesson-list {
+  border: 1px solid var(--border); border-top: none;
+  border-radius: 0 0 8px 8px; overflow: hidden; background: var(--surface);
+}
+.lesson-row {
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid var(--border-lt); transition: background .1s;
+}
+.lesson-row:last-child { border-bottom: none; }
+.lesson-row:hover { background: #fafbfd; }
+.lesson-row.hidden-course { display: none; }
+.lesson-row.today-row { background: #fffbf5; }
+.lesson-row.today-row:hover { background: #fff7ed; }
+
+/* カテゴリ区切り線 (太い実線) */
+.lesson-row.cat-start:not(:first-child) { border-top: 2px solid var(--border); }
+
+/* 左カテゴリラベル (色 + 資格名) */
+.lesson-cat-bar {
+  width: 68px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800;
+  color: rgba(255,255,255,.95);
+  letter-spacing: .02em;
+  padding: 0 6px;
+  text-align: center;
+  line-height: 1.3;
+  user-select: none;
+}
+.lesson-inner {
+  flex: 1; display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+}
+.lesson-time {
+  font-size: 11.5px; font-weight: 600; color: var(--muted);
+  white-space: nowrap; min-width: 116px; font-variant-numeric: tabular-nums;
+}
+.lesson-subject { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+
+/* サブラベルバッジ */
+.lesson-sub-badge {
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 4px;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* ── ハイライト Tier ── */
+/* Tier 1 — 本試験・検定 (金) */
+.lesson-row.tier1 {
+  background: linear-gradient(90deg, #fffbeb 0%, #fffdf6 60%, var(--surface) 100%);
+  border-top: 1px solid #fde68a;
+}
+.lesson-row.tier1 .lesson-subject { color: #92400e; font-weight: 800; }
+.lesson-row.tier1 .lesson-cat-bar { background: #b45309 !important; }
+/* Tier 2 — 特別研修会・オリエンテーション (カテゴリ色で強調、JS でインライン設定) */
+.lesson-row.tier2 .lesson-subject { font-weight: 700; }
+/* Tier 3 — 模擬試験・中間試験 (青) */
+.lesson-row.tier3 {
+  background: linear-gradient(90deg, #eff6ff 0%, #f8fbff 60%, var(--surface) 100%);
+  border-top: 1px solid #bfdbfe;
+}
+.lesson-row.tier3 .lesson-subject { color: #1e3a8a; font-weight: 700; }
+.lesson-row.tier3 .lesson-cat-bar { background: #2563eb !important; }
+
+.tier-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 4px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.tier-badge.t1 { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.tier-badge.t2 { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
+.tier-badge.t3 { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+#noResults {
+  display: none; text-align: center; padding: 60px 0; color: var(--muted); font-size: 14px;
+}
+.month-anchor { display: block; height: 0; }
+
+/* ================================================================
+   モバイル対応 (〜767px)
+   ================================================================ */
+@media (max-width: 767px) {
+  /* カレンダー非表示 */
+  .cal-sidebar { display: none !important; }
+
+  /* レイアウト */
+  .schedule-layout { padding: 0 6px; }
+  .main { padding: 14px 0 60px; }
+
+  /* ヘッダー */
+  .header { padding: 0 14px; }
+  .header-title { font-size: 13px; }
+
+  /* ツールバー */
+  .toolbar { padding: 6px 12px 8px; }
+  .tb-label { min-width: 32px; font-size: 9px; }
+
+  /* 月ナビ: 横スクロール */
+  .month-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .month-nav::-webkit-scrollbar { display: none; }
+  .month-btn { flex-shrink: 0; font-size: 10.5px; padding: 3px 8px; }
+
+  /* カテゴリフィルター: 横スクロール */
+  .toolbar-filter-row { flex-wrap: nowrap; gap: 4px; }
+  .cat-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex: 1;
+  }
+  .cat-filters::-webkit-scrollbar { display: none; }
+  .cat-btn { flex-shrink: 0; font-size: 11px; padding: 3px 9px; }
+  .cat-btn::after { display: none; } /* ツールチップ非表示 */
+  .filter-all-btn { flex-shrink: 0; font-size: 10px; padding: 3px 8px; margin-left: 0; }
+
+  /* 月バナー */
+  .month-banner { padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; }
+  .month-banner-num { font-size: 22px; }
+  .month-banner-unit { font-size: 12px; }
+
+  /* 日グループ */
+  .day-stripe { width: 34px; }
+  .day-num { font-size: 18px; }
+  .day-full-date { font-size: 10px; }
+
+  /* 授業行: subject を上段・time+バッジを下段に */
+  .lesson-cat-bar { width: 48px; font-size: 9px; padding: 0 3px; }
+  .lesson-inner {
+    padding: 7px 10px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 3px 8px;
+  }
+  .lesson-subject {
+    order: 1;
+    flex-basis: 100%;
+    font-size: 12.5px;
+  }
+  .lesson-time {
+    order: 2;
+    min-width: auto;
+    font-size: 11px;
+  }
+  .tier-badge {
+    order: 3;
+    font-size: 9px;
+    padding: 1px 5px;
+  }
+  .lesson-sub-badge {
+    order: 4;
+    font-size: 9px;
+    padding: 1px 5px;
+    margin-left: auto;
+  }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <a href="index.html" class="back-btn">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      ポータルに戻る
+    </a>
+    <span class="header-title">年間時間表</span>
+  </div>
+  <div style="font-size:11px;color:var(--muted)" id="eventCount">— 件</div>
+</header>
+
+<div class="toolbar" id="toolbar">
+  <div class="toolbar-month-row">
+    <span class="tb-label">月</span>
+    <div class="month-nav" id="monthNav"></div>
+  </div>
+  <div class="toolbar-filter-row">
+    <span class="tb-label">講座</span>
+    <div class="cat-filters" id="catFilters"></div>
+    <button class="filter-all-btn" id="filterAllBtn" onclick="toggleAllCategories()">全解除</button>
+  </div>
+</div>
+
+<div class="schedule-layout">
+
+  <!-- ── カレンダーサイドバー ── -->
+  <aside class="cal-sidebar">
+    <div class="cal-widget">
+      <div class="cal-widget-head">
+        <button class="cal-nav-btn" id="calPrev">&#9664;</button>
+        <span class="cal-widget-label" id="calLabel"></span>
+        <button class="cal-nav-btn" id="calNext">&#9654;</button>
+      </div>
+      <div class="cal-dow-row">
+        <div class="cal-dow">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div>
+        <div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div>
+        <div class="cal-dow">土</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </aside>
+
+  <!-- ── スケジュール本体 ── -->
+  <div class="main" id="main"></div>
+
+</div>
+<div id="noResults">表示できる授業がありません。フィルターを確認してください。</div>
+<div id="schedCalTooltip"></div>
+
+<script>
+// ================================================================
+// カテゴリ定義
+// ================================================================
+const CATEGORIES = [
+  { key: '1建築士', label: '1級建築士', color: '#db2777', lt: '#fce7f3' },
+  { key: '2建築士', label: '2級建築士', color: '#0891b2', lt: '#ecfeff' },
+  { key: '建築施工', label: '建築施工',  color: '#2563eb', lt: '#eff6ff' },
+  { key: '土木',    label: '土木施工',  color: '#16a34a', lt: '#f0fdf4' },
+  { key: '宅建',    label: '宅建',      color: '#d97706', lt: '#fffbeb' },
+];
+
+function getCatKey(course) {
+  if (/１級建築士|1級建築士/.test(course))  return '1建築士';
+  if (/２級建築士|2級建築士/.test(course))  return '2建築士';
+  if (/建築施工/.test(course))               return '建築施工';
+  if (/土木施工/.test(course))               return '土木';
+  if (/宅建/.test(course))                   return '宅建';
+  return '1建築士';
+}
+function getCatInfo(catKey) {
+  return CATEGORIES.find(c => c.key === catKey) || CATEGORIES[0];
+}
+
+// ③ コース名 → サブラベル（資格内のコース種別）
+function getSubLabel(course) {
+  if (/設計製図/.test(course))                                return '設計製図';
+  if (/問解/.test(course))                                    return '問題解説';
+  if (/二次/.test(course))                                    return '1級二次';
+  if (/１級建築施工.*一次|1級建築施工.*一次/.test(course))   return '1級一次';
+  if (/２級建築施工.*一次/.test(course))                     return '2級一次';
+  if (/土木.*一次/.test(course))                             return '土木一次';
+  if (/本科/.test(course))                                    return '学科本科';
+  return '本科';
+}
+
+// コース名 → 曜日略称
+function getScheduleAbbr(course) {
+  if (/-土曜/.test(course)) return '土';
+  if (/-日曜/.test(course)) return '日';
+  if (/-平日/.test(course)) return '平';
+  if (/-夜間/.test(course)) return '夜';
+  return '';
+}
+
+// ================================================================
+// ハイライト Tier
+// ================================================================
+const TIER_SVG = {
+  1: `<svg width="12" height="12" viewBox="0 0 24 24" fill="#d97706"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
+  2: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 4v17M4 4h12l-2 6H4M4 11h10l-2 6H4"/></svg>`,
+  3: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>`,
+};
+const TIER_LABEL = { 1: '本試験', 2: '特別', 3: '模擬試験' };
+
+function getHighlightTier(subject) {
+  if (/本試験|一次検定|二次検定/.test(subject))                    return 1;
+  if (/特別研修会|オリエンテーション|ｵﾘｴﾝﾃｰｼｮﾝ/.test(subject))   return 2;
+  if (/模擬試験|公開学力試験|中間試験|総仕上模試|まとめ試験/.test(subject)) return 3;
+  return 0;
+}
+
+// ================================================================
+// 状態
+// ================================================================
+const TODAY     = new Date();
+const TODAY_ISO = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`;
+const DOW_LABELS = ['日','月','火','水','木','金','土'];
+
+const MONTHS = (() => {
+  const s = new Set();
+  SCHEDULE_DATA.events.forEach(e => s.add(e.date.substring(0,7)));
+  return Array.from(s).sort();
+})();
+
+const activeCategories = new Set(CATEGORIES.map(c => c.key));
+
+// ================================================================
+// ② ツールバー高さ → CSS変数にセット（月バナーのstickyオフセット）
+// ================================================================
+function syncToolbarHeight() {
+  const h = document.getElementById('toolbar').offsetHeight;
+  document.documentElement.style.setProperty('--toolbar-h', h + 'px');
+}
+
+// ================================================================
+// カテゴリフィルター構築
+// ================================================================
+function buildCatFilters() {
+  const container = document.getElementById('catFilters');
+
+  // カテゴリ別コース一覧
+  const catCourses = {};
+  CATEGORIES.forEach(c => catCourses[c.key] = []);
+  SCHEDULE_DATA.courses.forEach(course => {
+    const key = getCatKey(course);
+    if (catCourses[key]) catCourses[key].push(course);
+  });
+
+  CATEGORIES.forEach(cat => {
+    const courses = catCourses[cat.key];
+    const count   = courses.length;
+
+    // ツールチップ: コース名一覧（サブラベル + 曜日）
+    const tipLines = courses.map(c => `• ${getSubLabel(c)} (${getScheduleAbbr(c)})`).join('\n');
+
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn on';
+    btn.dataset.cat = cat.key;
+    btn.dataset.tip = tipLines;
+    btn.innerHTML = `<span class="cat-dot"></span>${cat.label}<span class="cat-count">${count}</span>`;
+    btn.addEventListener('click', () => toggleCategory(cat.key));
+    container.appendChild(btn);
+  });
+}
+
+function toggleCategory(catKey) {
+  const btn = document.querySelector(`.cat-btn[data-cat="${catKey}"]`);
+  if (activeCategories.has(catKey)) {
+    activeCategories.delete(catKey);
+    btn.classList.replace('on', 'off');
+  } else {
+    activeCategories.add(catKey);
+    btn.classList.replace('off', 'on');
+  }
+  applyFilter();
+  updateAllBtn();
+}
+
+let _allOn = true;
+function toggleAllCategories() {
+  if (_allOn) {
+    activeCategories.clear();
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.replace('on','off'));
+    _allOn = false;
+    document.getElementById('filterAllBtn').textContent = '全選択';
+  } else {
+    CATEGORIES.forEach(c => activeCategories.add(c.key));
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.replace('off','on'));
+    _allOn = true;
+    document.getElementById('filterAllBtn').textContent = '全解除';
+  }
+  applyFilter();
+}
+function updateAllBtn() {
+  const allOn = CATEGORIES.every(c => activeCategories.has(c.key));
+  _allOn = allOn;
+  document.getElementById('filterAllBtn').textContent = allOn ? '全解除' : '全選択';
+}
+
+function applyFilter() {
+  let anyVisible = false;
+  MONTHS.forEach(ym => {
+    const section = document.getElementById(`section-${ym}`);
+    if (!section) return;
+    let sectionHasVisible = false;
+
+    section.querySelectorAll('.lesson-row').forEach(row => {
+      const visible = activeCategories.has(row.dataset.cat);
+      row.classList.toggle('hidden-course', !visible);
+      if (visible) { sectionHasVisible = true; anyVisible = true; }
+    });
+
+    // 全行 hidden の日グループを非表示
+    section.querySelectorAll('.day-group').forEach(dg => {
+      const visibleRows = dg.querySelectorAll('.lesson-row:not(.hidden-course)').length;
+      dg.style.display = visibleRows === 0 ? 'none' : '';
+    });
+
+    section.classList.toggle('hidden', !sectionHasVisible);
+  });
+  document.getElementById('noResults').style.display = anyVisible ? 'none' : 'block';
+  updateEventCount();
+  renderSchedCal(); // フィルター変更をカレンダーに反映
+}
+
+function updateEventCount() {
+  const count = document.querySelectorAll('.lesson-row:not(.hidden-course)').length;
+  document.getElementById('eventCount').textContent = `${count} 件`;
+}
+
+// ================================================================
+// 月ナビ
+// ================================================================
+function buildMonthNav() {
+  const nav     = document.getElementById('monthNav');
+  const toolbar = document.getElementById('toolbar');
+  MONTHS.forEach(ym => {
+    const [y, m] = ym.split('-');
+    const btn = document.createElement('button');
+    btn.className = 'month-btn';
+    btn.dataset.ym = ym;
+    btn.textContent = parseInt(y) === 2025 ? `${parseInt(m)}月(25)` : `${parseInt(m)}月`;
+    btn.addEventListener('click', () => {
+      const anchor = document.getElementById(`anchor-${ym}`);
+      if (!anchor) return;
+      window.scrollTo({ top: anchor.getBoundingClientRect().top + window.scrollY - toolbar.offsetHeight - 8, behavior: 'smooth' });
+    });
+    nav.appendChild(btn);
+  });
+}
+
+function updateActiveMonthBtn() {
+  const toolbarH = document.getElementById('toolbar').offsetHeight;
+  let current = null;
+  MONTHS.forEach(ym => {
+    const anchor = document.getElementById(`anchor-${ym}`);
+    if (anchor && anchor.getBoundingClientRect().top <= toolbarH + 64) current = ym;
+  });
+  document.querySelectorAll('.month-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.ym === current);
+  });
+}
+
+// ② 月バナーの is-stuck 更新
+function updateBannerStuck() {
+  const toolbarH = document.getElementById('toolbar').offsetHeight;
+  document.querySelectorAll('.month-banner').forEach(banner => {
+    const rect = banner.getBoundingClientRect();
+    // topがtoolbar高さと一致 = sticky発動中
+    banner.classList.toggle('is-stuck', Math.round(rect.top) <= toolbarH + 2);
+  });
+}
+
+window.addEventListener('scroll', () => {
+  updateActiveMonthBtn();
+  updateBannerStuck();
+}, { passive: true });
+window.addEventListener('resize', syncToolbarHeight);
+
+// ================================================================
+// ④ 同日内ソート: コース内連続を維持
+//   一次キー: そのコースの当日最初の時刻 (数値比較)
+//   二次キー: コース名
+//   三次キー: 授業時刻 (数値比較)
+// ================================================================
+function timeToMins(timeStr) {
+  // "9:30〜11:20" や "18:30〜21:00" → 開始分数
+  if (!timeStr) return 9999;
+  const m = timeStr.match(/^(\d{1,2}):(\d{2})/);
+  return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : 9999;
+}
+
+function sortLessonsForDay(lessons) {
+  // カテゴリ・コース別の当日最初の開始分数を集計
+  const catFirst    = {};
+  const courseFirst = {};
+  lessons.forEach(l => {
+    const cat  = getCatKey(l.course);
+    const mins = timeToMins(l.time);
+    if (catFirst[cat]        === undefined || mins < catFirst[cat])        catFirst[cat]        = mins;
+    if (courseFirst[l.course] === undefined || mins < courseFirst[l.course]) courseFirst[l.course] = mins;
+  });
+  return lessons.slice().sort((a, b) => {
+    const catA = getCatKey(a.course), catB = getCatKey(b.course);
+    // 1. カテゴリの最早時刻（同カテゴリを固める）
+    const cf = (catFirst[catA] ?? 9999) - (catFirst[catB] ?? 9999);
+    if (cf !== 0) return cf;
+    // 2. カテゴリキー（同時刻なら定義順で安定）
+    const cc = catA.localeCompare(catB);
+    if (cc !== 0) return cc;
+    // 3. コースの最早時刻
+    const ft = (courseFirst[a.course] ?? 9999) - (courseFirst[b.course] ?? 9999);
+    if (ft !== 0) return ft;
+    // 4. コース名
+    const cn = a.course.localeCompare(b.course);
+    if (cn !== 0) return cn;
+    // 5. 授業時刻
+    return timeToMins(a.time) - timeToMins(b.time);
+  });
+}
+
+// ================================================================
+// コンテンツ構築
+// ================================================================
+function buildContent() {
+  const main = document.getElementById('main');
+
+  const byMonth = {};
+  SCHEDULE_DATA.events.forEach(e => {
+    const ym = e.date.substring(0, 7);
+    if (!byMonth[ym]) byMonth[ym] = {};
+    if (!byMonth[ym][e.date]) byMonth[ym][e.date] = [];
+    byMonth[ym][e.date].push(e);
+  });
+
+  const bannerColors = ['#4f46e5','#4f46e5','#4f46e5','#059669','#059669',
+                        '#0891b2','#0891b2','#0891b2','#f97316','#f97316','#db2777','#db2777'];
+
+  MONTHS.forEach(ym => {
+    const [y, m] = ym.split('-').map(Number);
+    const days = byMonth[ym] || {};
+    const totalEvents = Object.values(days).reduce((s, a) => s + a.length, 0);
+
+    const section = document.createElement('section');
+    section.className = 'month-section';
+    section.id = `section-${ym}`;
+
+    // アンカー
+    const anchor = document.createElement('span');
+    anchor.className = 'month-anchor';
+    anchor.id = `anchor-${ym}`;
+    section.appendChild(anchor);
+
+    // ② 月バナー (sticky)
+    const banner = document.createElement('div');
+    banner.className = 'month-banner';
+    banner.style.borderLeftColor = bannerColors[m-1] || '#4f46e5';
+    banner.innerHTML = `
+      <span class="month-banner-num">${m}</span>
+      <span class="month-banner-unit">月</span>
+      <span class="month-banner-year">${y}年</span>
+      <span class="month-banner-count" id="mc-${ym}">${totalEvents} 件</span>
+    `;
+    section.appendChild(banner);
+
+    // 日グループ
+    Object.keys(days).sort().forEach(dateIso => {
+      const rawLessons = days[dateIso];
+      const lessons    = sortLessonsForDay(rawLessons); // ④ ソート
+      const dateObj    = new Date(dateIso + 'T00:00:00');
+      const dow        = dateObj.getDay();
+      const dayNum     = dateObj.getDate();
+      const isToday    = dateIso === TODAY_ISO;
+      const dowClass   = dow === 0 ? 'sun' : dow === 6 ? 'sat' : 'wkd';
+
+      const dayGroup = document.createElement('div');
+      dayGroup.className = 'day-group';
+      // ① 今日へスクロールするための id
+      dayGroup.id = `day-${dateIso}`;
+
+      const dayHeader = document.createElement('div');
+      dayHeader.className = `day-header${isToday ? ' today-header' : ''}`;
+      dayHeader.innerHTML = `
+        <div class="day-stripe ${dowClass}">
+          <span class="day-stripe-dow">${DOW_LABELS[dow]}</span>
+        </div>
+        <div class="day-info">
+          <span class="day-num">${dayNum}</span>
+          <span class="day-full-date">${y}/${String(m).padStart(2,'0')}/${String(dayNum).padStart(2,'0')}</span>
+          ${isToday ? '<span class="day-today-chip">TODAY</span>' : ''}
+        </div>
+      `;
+      dayGroup.appendChild(dayHeader);
+
+      const lessonList = document.createElement('div');
+      lessonList.className = 'lesson-list';
+
+      // カテゴリ・コース区切り線を管理
+      let prevCourse = null;
+      let prevCat    = null;
+
+      lessons.forEach(lesson => {
+        const catKey    = getCatKey(lesson.course);
+        const catInfo   = getCatInfo(catKey);
+        const tier      = getHighlightTier(lesson.subject);
+        const subLabel  = getSubLabel(lesson.course);
+        const schedAbbr = getScheduleAbbr(lesson.course);
+        const isCatStart    = catKey !== prevCat;
+        const isCourseStart = lesson.course !== prevCourse;
+        prevCourse = lesson.course;
+        prevCat    = catKey;
+
+        const row = document.createElement('div');
+        row.className = [
+          'lesson-row',
+          isToday ? 'today-row' : '',
+          tier ? `tier${tier}` : '',
+          isCatStart    ? 'cat-start'    : '',
+          isCourseStart ? 'course-start' : '',
+        ].filter(Boolean).join(' ');
+        row.dataset.cat    = catKey;
+        row.dataset.course = lesson.course;
+
+        // Tier2: カテゴリ色で背景を設定（紫を使わない）
+        if (tier === 2) {
+          row.style.background = `linear-gradient(90deg, ${catInfo.lt} 0%, ${catInfo.lt}60 50%, var(--surface) 100%)`;
+        }
+
+        // Tier2 バッジはカテゴリ色で描画
+        let tierBadgeHtml = '';
+        if (tier) {
+          if (tier === 2) {
+            tierBadgeHtml = `<span class="tier-badge t2" style="background:${catInfo.lt};color:${catInfo.color};border-color:${catInfo.color}55">${TIER_SVG[tier]}${TIER_LABEL[tier]}</span>`;
+          } else {
+            tierBadgeHtml = `<span class="tier-badge t${tier}">${TIER_SVG[tier]}${TIER_LABEL[tier]}</span>`;
+          }
+        }
+
+        row.innerHTML = `
+          <div class="lesson-cat-bar" style="background:${catInfo.color}">${escHtml(catInfo.label)}</div>
+          <div class="lesson-inner">
+            <span class="lesson-time">${lesson.time || '—'}</span>
+            <span class="lesson-subject">${escHtml(lesson.subject)}</span>
+            ${tierBadgeHtml}
+            <span class="lesson-sub-badge" style="background:${catInfo.lt};color:${catInfo.color}">${subLabel}${schedAbbr ? `<span style="opacity:.65;font-weight:500"> ${schedAbbr}</span>` : ''}</span>
+          </div>
+        `;
+        lessonList.appendChild(row);
+      });
+
+      dayGroup.appendChild(lessonList);
+      section.appendChild(dayGroup);
+    });
+
+    main.appendChild(section);
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ================================================================
+// ① 今日の日付へスクロール
+// ================================================================
+function scrollToToday() {
+  const toolbar = document.getElementById('toolbar');
+  const toolbarH = toolbar.offsetHeight;
+
+  // 今日の日グループがあればそこへ
+  const todayGroup = document.getElementById(`day-${TODAY_ISO}`);
+  if (todayGroup) {
+    const top = todayGroup.getBoundingClientRect().top + window.scrollY;
+    // ツールバー + 月バナー高さ分オフセット（月バナーは sticky でツールバー直下に張り付く）
+    const bannerH = todayGroup.closest('.month-section')?.querySelector('.month-banner')?.offsetHeight || 0;
+    window.scrollTo({ top: Math.max(0, top - toolbarH - bannerH - 8), behavior: 'instant' });
+    return;
+  }
+
+  // 今日が存在しない場合 → 今月の先頭へ
+  const todayYM  = TODAY_ISO.substring(0, 7);
+  const fallback = MONTHS.find(m => m >= todayYM) || MONTHS[0];
+  if (!fallback) return;
+  const anchor = document.getElementById(`anchor-${fallback}`);
+  if (anchor) {
+    window.scrollTo({ top: anchor.getBoundingClientRect().top + window.scrollY - toolbarH - 8, behavior: 'instant' });
+  }
+}
+
+// ================================================================
+// 初期化
+// ================================================================
+function init() {
+  buildCatFilters();
+  buildMonthNav();
+  buildContent();
+  updateEventCount();
+
+  // ツールバー高さをCSS変数に反映
+  syncToolbarHeight();
+
+  // ① 今日へスクロール
+  setTimeout(() => {
+    scrollToToday();
+    updateActiveMonthBtn();
+    updateBannerStuck();
+  }, 50);
+}
+
+init();
+
+// ================================================================
+// カレンダーウィジェット
+// ================================================================
+
+// 日付 → イベント一覧のマップ (フィルター非依存、全データ)
+const eventsByDate = (() => {
+  const map = {};
+  SCHEDULE_DATA.events.forEach(e => {
+    if (!map[e.date]) map[e.date] = [];
+    map[e.date].push(e);
+  });
+  return map;
+})();
+
+let calY = TODAY.getMonth() >= 10 ? TODAY.getFullYear() : TODAY.getFullYear();
+let calM = TODAY.getMonth();
+
+document.getElementById('calPrev').onclick = () => {
+  calM--; if (calM < 0) { calM = 11; calY--; }
+  renderSchedCal();
+};
+document.getElementById('calNext').onclick = () => {
+  calM++; if (calM > 11) { calM = 0; calY++; }
+  renderSchedCal();
+};
+
+function renderSchedCal() {
+  const MLABELS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('calLabel').textContent = `${calY}年 ${MLABELS[calM]}`;
+
+  const grid  = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  const first  = new Date(calY, calM, 1);
+  const last   = new Date(calY, calM + 1, 0);
+  const offset = first.getDay(); // 0=日
+
+  // 前月の空白
+  for (let i = 0; i < offset; i++) {
+    const d = new Date(calY, calM, 1 - (offset - i));
+    addSchedCalCell(grid, d.getDate(), 'other', null);
+  }
+  // 当月
+  for (let d = 1; d <= last.getDate(); d++) {
+    const date   = new Date(calY, calM, d);
+    const dow    = date.getDay();
+    const key    = `${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = date.toDateString() === TODAY.toDateString();
+    let cls = isToday ? 'today' : (dow === 0 ? 'sun' : dow === 6 ? 'sat' : '');
+    addSchedCalCell(grid, d, cls, key);
+  }
+  // 後月の空白
+  const rem = grid.children.length % 7 === 0 ? 0 : 7 - (grid.children.length % 7);
+  for (let i = 1; i <= rem; i++) addSchedCalCell(grid, i, 'other', null);
+}
+
+function addSchedCalCell(grid, num, cls, dateKey) {
+  const cell = document.createElement('div');
+  cell.className = `s-cal-cell ${cls}`;
+  cell.textContent = num;
+
+  if (dateKey && eventsByDate[dateKey]) {
+    // アクティブなカテゴリのイベントのみ
+    const events = eventsByDate[dateKey].filter(e => activeCategories.has(getCatKey(e.course)));
+    if (!events.length) { grid.appendChild(cell); return; }
+    cell.classList.add('has-event');
+
+    // カテゴリ別ドット（重複なし、最大5色）
+    const cats = [...new Set(events.map(e => getCatKey(e.course)))];
+    const dotRow = document.createElement('div');
+    dotRow.className = 's-cal-dot-row';
+    cats.slice(0, 5).forEach(catKey => {
+      const dot = document.createElement('div');
+      dot.className = 's-cal-dot';
+      dot.style.background = getCatInfo(catKey).color;
+      dotRow.appendChild(dot);
+    });
+    cell.appendChild(dotRow);
+
+    // ツールチップ
+    cell.addEventListener('mouseenter', e => showSchedTooltip(e, dateKey));
+    cell.addEventListener('mousemove',  e => moveSchedTooltip(e));
+    cell.addEventListener('mouseleave', hideSchedTooltip);
+
+    // クリックでその日にスクロール
+    cell.addEventListener('click', () => {
+      const dayEl = document.getElementById(`day-${dateKey}`);
+      if (!dayEl) return;
+      const toolbar = document.getElementById('toolbar');
+      const bannerH = dayEl.closest('.month-section')?.querySelector('.month-banner')?.offsetHeight || 0;
+      window.scrollTo({
+        top: dayEl.getBoundingClientRect().top + window.scrollY - toolbar.offsetHeight - bannerH - 8,
+        behavior: 'smooth'
+      });
+    });
+  }
+
+  grid.appendChild(cell);
+}
+
+// ツールチップ
+const _stt = document.getElementById('schedCalTooltip');
+
+function showSchedTooltip(e, dateKey) {
+  const events = eventsByDate[dateKey];
+  if (!events || !events.length) return;
+
+  const d   = new Date(dateKey + 'T00:00:00');
+  const dow = ['日','月','火','水','木','金','土'][d.getDay()];
+  const sorted = sortLessonsForDay(events);
+
+  let html = `<div class="stt-date">${d.getMonth()+1}月${d.getDate()}日（${dow}）</div>`;
+
+  const MAX_SHOW = 8;
+  sorted.slice(0, MAX_SHOW).forEach(ev => {
+    const catInfo = getCatInfo(getCatKey(ev.course));
+    html += `
+      <div class="stt-item">
+        <div class="stt-bar" style="background:${catInfo.color}"></div>
+        <div class="stt-body">
+          <div class="stt-time">${ev.time || '—'}</div>
+          <div class="stt-subj">${escHtml(ev.subject)}</div>
+          <div class="stt-cat">${catInfo.label} / ${getSubLabel(ev.course)}</div>
+        </div>
+      </div>`;
+  });
+  if (sorted.length > MAX_SHOW) {
+    html += `<div class="stt-more">他 ${sorted.length - MAX_SHOW} 件...</div>`;
+  }
+
+  _stt.innerHTML = html;
+  _stt.style.display = 'block';
+  moveSchedTooltip(e);
+}
+
+function moveSchedTooltip(e) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let x = e.clientX + 16, y = e.clientY + 16;
+  if (x + 290 > vw) x = e.clientX - 295;
+  if (y + _stt.offsetHeight + 10 > vh) y = e.clientY - _stt.offsetHeight - 10;
+  _stt.style.left = x + 'px';
+  _stt.style.top  = y + 'px';
+}
+
+function hideSchedTooltip() { _stt.style.display = 'none'; }
+
+renderSchedCal();
+</script>
+</body>
+</html>
