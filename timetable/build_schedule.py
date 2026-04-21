@@ -39,10 +39,10 @@ def norm_header(s):
 def detect_columns(header_row):
     norm = [norm_header(c) for c in header_row]
 
-    # 日程列: "日程", "日 程", "講義日" などを検出
+    # 日程列: "日程", "講義日", "月日" などを検出
     date_col = None
     for i, v in enumerate(norm):
-        if '日程' in v or v == '講義日':
+        if '日程' in v or v == '講義日' or '月日' in v:
             date_col = i
             break
 
