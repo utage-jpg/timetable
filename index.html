@@ -67,27 +67,29 @@ body {
 .header-title { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
 
 /* ── スティッキー ツールバー ── */
-.toolbar {
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  padding: 8px 24px 10px;
-  position: sticky; top: 0; z-index: 100;
-  box-shadow: var(--shadow-xs);
+/* ツールバー非表示（月ナビ・フィルターはシートに統合） */
+#toolbar { display: none; }
+
+/* ── シート内 月ナビ ── */
+.sheet-section { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border-lt); }
+.sheet-section:last-child { border-bottom: none; margin-bottom: 0; }
+.sheet-section-label {
+  display: block; font-size: 10px; font-weight: 800;
+  color: var(--muted-lt); letter-spacing: .08em; text-transform: uppercase;
+  margin-bottom: 10px;
 }
-.toolbar-month-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.tb-label {
-  font-size: 10px; font-weight: 700; color: var(--muted-lt);
-  letter-spacing: .08em; text-transform: uppercase;
-  white-space: nowrap; min-width: 54px;
-}
-.month-nav { display: flex; gap: 3px; flex-wrap: wrap; flex: 1; }
+.month-nav { display: flex; gap: 7px; flex-wrap: wrap; }
 .month-btn {
-  padding: 3px 10px; font-size: 11.5px; font-weight: 600;
-  border-radius: 20px; border: 1.5px solid var(--border);
-  background: transparent; color: var(--text-sub);
+  padding: 9px 16px; font-size: 13px; font-weight: 700;
+  border-radius: 10px; border: 1.5px solid var(--border);
+  background: var(--bg); color: var(--text-sub);
   cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit;
 }
 .month-btn:hover  { background: var(--indigo-lt); border-color: var(--indigo-bd); color: var(--indigo); }
-.month-btn.active { background: var(--indigo); border-color: var(--indigo); color: #fff; box-shadow: 0 1px 6px rgba(79,70,229,.4); }
+.month-btn.active {
+  background: var(--indigo); border-color: var(--indigo); color: #fff;
+  box-shadow: 0 2px 10px rgba(79,70,229,.35);
+}
 
 /* ── カテゴリフィルター（旧: JS互換のため非表示で残す） ── */
 .cat-filters { display: none; }
@@ -205,8 +207,16 @@ body {
 }
 .fab-btn:hover  { transform: scale(1.07); box-shadow: 0 6px 24px rgba(0,0,0,.3); }
 .fab-btn:active { transform: scale(.93); }
-.fab-today { background: var(--indigo); color: #fff; }
-.fab-pdf   { background: #dc2626; color: #fff; }
+.fab-today   { background: var(--indigo); color: #fff; }
+.fab-pdf     { background: #dc2626; color: #fff; }
+.fab-filter  { background: #059669; color: #fff; }
+.fab-filter-badge {
+  position: absolute; top: 2px; right: 2px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #f97316; border: 2px solid #fff;
+  display: none;
+}
+.fab-filter-badge.show { display: block; }
 .fab-tip {
   position: absolute; right: calc(100% + 10px); top: 50%;
   transform: translateY(-50%);
@@ -413,7 +423,7 @@ body {
   box-shadow: var(--shadow-xs);
   margin-bottom: 16px;
   position: sticky;
-  top: var(--toolbar-h);
+  top: 0;
   z-index: 50;
   transition: box-shadow .2s;
 }
@@ -562,20 +572,8 @@ body {
   .header { padding: 0 14px; }
   .header-title { font-size: 13px; }
 
-  /* ツールバー */
-  .toolbar { padding: 6px 12px 8px; }
-  .tb-label { min-width: 32px; font-size: 9px; }
-
-  /* 月ナビ: 横スクロール */
-  .month-nav {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-  }
-  .month-nav::-webkit-scrollbar { display: none; }
-  .month-btn { flex-shrink: 0; font-size: 10.5px; padding: 3px 8px; }
+  /* シート内月ボタン（スマホ：少し小さめに） */
+  .month-btn { padding: 8px 14px; font-size: 12.5px; }
 
   /* 絞り込みボタン（モバイル） */
   .filter-toggle-btn { font-size: 13px; padding: 9px 14px; }
@@ -649,6 +647,11 @@ body {
     <span class="fab-tip">今日の予定</span>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2" fill="currentColor" stroke="none"/></svg>
   </button>
+  <button class="fab-btn fab-filter" onclick="openFilterSheet()" aria-label="月・講座を絞り込む" id="fabFilterBtn">
+    <span class="fab-tip">月・講座を絞り込む</span>
+    <span class="fab-filter-badge" id="fabFilterBadge"></span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+  </button>
 </div>
 
 <!-- ── PDFモーダル ── -->
@@ -692,13 +695,21 @@ body {
   <div class="filter-sheet">
     <div class="filter-sheet-handle"></div>
     <div class="filter-sheet-head">
-      <span class="filter-sheet-title">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:4px"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-        講座を絞り込む
-      </span>
+      <span class="filter-sheet-title">月・講座を選ぶ</span>
       <button class="filter-sheet-allbtn" id="filterSheetAllBtn" onclick="toggleAllCategories()">全解除</button>
     </div>
-    <div class="filter-sheet-body" id="filterSheetBody"></div>
+    <div class="filter-sheet-body" id="filterSheetBody">
+      <!-- 月ナビセクション（buildMonthNav()で#monthNavを充填） -->
+      <div class="sheet-section">
+        <span class="sheet-section-label">月を選ぶ</span>
+        <div class="month-nav" id="monthNav"></div>
+      </div>
+      <!-- 講座フィルターセクション（buildFilterSheet()で充填） -->
+      <div class="sheet-section" id="filterCatSection">
+        <span class="sheet-section-label">講座を絞り込む</span>
+        <div id="filterSheetCats"></div>
+      </div>
+    </div>
     <div class="filter-sheet-foot">
       <button class="filter-close-btn" onclick="closeFilterSheet()">閉じる</button>
     </div>
@@ -757,6 +768,11 @@ const SUBCATEGORIES = {
     { key: '1級', label: '1級' },
     { key: '2級', label: '2級' },
   ],
+  '宅建': [
+    { key: '本科',     label: '本科' },
+    { key: '短期集中', label: '短期集中' },
+    { key: '直前対策', label: '直前対策' },
+  ],
 };
 
 function getCatKey(course) {
@@ -792,6 +808,11 @@ function getCatSubKey(catKey, course) {
     return '学科';
   }
   if (catKey === '建築施工') return /２級建築施工|2級建築施工/.test(course) ? '2級' : '1級';
+  if (catKey === '宅建') {
+    if (/短期集中/.test(course)) return '短期集中';
+    if (/直前対策/.test(course)) return '直前対策';
+    return '本科';
+  }
   return null;
 }
 
@@ -885,7 +906,7 @@ function buildCatFilters() {
 // ボトムシートフィルター
 // ================================================================
 function buildFilterSheet() {
-  const body = document.getElementById('filterSheetBody');
+  const body = document.getElementById('filterSheetCats');
   body.innerHTML = '';
 
   // カテゴリ別コース数・イベント数を集計
@@ -973,6 +994,7 @@ function updateFilterSheet() {
 function updateFilterToggleBtn() {
   const dots  = document.getElementById('filterActiveDots');
   const badge = document.getElementById('filterCountBadge');
+  const fabBadge = document.getElementById('fabFilterBadge');
   dots.innerHTML = '';
   const onCats = CATEGORIES.filter(c => activeCategories.has(c.key));
   onCats.forEach(cat => {
@@ -981,12 +1003,13 @@ function updateFilterToggleBtn() {
     d.style.background = cat.color;
     dots.appendChild(d);
   });
+  const allOn = onCats.length === CATEGORIES.length;
   if (badge) {
-    const allOn = onCats.length === CATEGORIES.length;
     badge.textContent = allOn ? `全${CATEGORIES.length}講座` : `${onCats.length}/${CATEGORIES.length}講座`;
     badge.style.background = allOn ? '' : '#fef3c7';
     badge.style.color      = allOn ? '' : '#92400e';
   }
+  if (fabBadge) fabBadge.classList.toggle('show', !allOn);
 }
 
 function openFilterSheet() {
@@ -1138,8 +1161,7 @@ function updateEventCount() {
 // 月ナビ
 // ================================================================
 function buildMonthNav() {
-  const nav     = document.getElementById('monthNav');
-  const toolbar = document.getElementById('toolbar');
+  const nav = document.getElementById('monthNav');
   MONTHS.forEach(ym => {
     const [y, m] = ym.split('-');
     const btn = document.createElement('button');
@@ -1147,20 +1169,22 @@ function buildMonthNav() {
     btn.dataset.ym = ym;
     btn.textContent = parseInt(y) === 2025 ? `${parseInt(m)}月(25)` : `${parseInt(m)}月`;
     btn.addEventListener('click', () => {
-      const anchor = document.getElementById(`anchor-${ym}`);
-      if (!anchor) return;
-      window.scrollTo({ top: anchor.getBoundingClientRect().top + window.scrollY - toolbar.offsetHeight - 8, behavior: 'smooth' });
+      closeFilterSheet();
+      setTimeout(() => {
+        const anchor = document.getElementById(`anchor-${ym}`);
+        if (!anchor) return;
+        window.scrollTo({ top: anchor.getBoundingClientRect().top + window.scrollY - 8, behavior: 'smooth' });
+      }, 240);
     });
     nav.appendChild(btn);
   });
 }
 
 function updateActiveMonthBtn() {
-  const toolbarH = document.getElementById('toolbar').offsetHeight;
   let current = null;
   MONTHS.forEach(ym => {
     const anchor = document.getElementById(`anchor-${ym}`);
-    if (anchor && anchor.getBoundingClientRect().top <= toolbarH + 64) current = ym;
+    if (anchor && anchor.getBoundingClientRect().top <= 64) current = ym;
   });
   document.querySelectorAll('.month-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.ym === current);
@@ -1169,11 +1193,9 @@ function updateActiveMonthBtn() {
 
 // ② 月バナーの is-stuck 更新
 function updateBannerStuck() {
-  const toolbarH = document.getElementById('toolbar').offsetHeight;
   document.querySelectorAll('.month-banner').forEach(banner => {
     const rect = banner.getBoundingClientRect();
-    // topがtoolbar高さと一致 = sticky発動中
-    banner.classList.toggle('is-stuck', Math.round(rect.top) <= toolbarH + 2);
+    banner.classList.toggle('is-stuck', Math.round(rect.top) <= 2);
   });
 }
 
